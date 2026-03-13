@@ -7,110 +7,47 @@ Team: David Puchala · Giorgio Fiorentino · Jakob Kohrgruber · María Angélic
 
 ## Overview
 
-Companies in document-heavy industries (legal, healthcare, finance) receive hundreds of documents daily — contracts, invoices, forms — arriving in mixed formats via email, uploads, and scans. Manual sorting is slow, error-prone, and wastes skilled staff time.
+Companies in document-heavy industries receive hundreds of documents daily — contracts, invoices, forms — in mixed formats. Manual sorting is slow, error-prone, and a poor use of skilled staff time.
 
-This project builds a **fully serverless, ML-driven document classification and routing pipeline on AWS**. A user uploads a document through a web dashboard; the system automatically extracts its text, classifies it, stores it in the appropriate S3 destination, records metadata to DynamoDB, and sends an email notification via SNS — all without human intervention.
+This project builds a fully serverless, ML-driven pipeline on AWS. A user uploads a document; the system classifies it, routes it to the correct S3 folder, logs metadata to DynamoDB, and sends an email notification via SNS — all automatically.
 
 ---
 
 ## Architecture
 
-```
-User uploads document (PDF/PNG/JPG)
-        │
-        ▼
-  API Gateway (REST)
-        │
-        ▼
-  Lambda: Ingest
-  → Stores raw file to S3 incoming/
-        │
-        ▼
-  Lambda: Classify
-  → Extracts text via AWS Textract
-  → Loads TF-IDF + Logistic Regression model from S3
-  → Predicts document type (invoice / contract / form / manual_review)
-  → Routes file to typed S3 folder (e.g. processed/invoices/)
-  → Writes metadata + confidence score to DynamoDB
-        │
-        ▼
-  DynamoDB Streams
-        │
-        ▼
-  Lambda: Notify
-  → Publishes classification result to SNS
-  → Triggers email notification to recipient
-        │
-        ▼
-  Frontend Dashboard
-  → Polls API Gateway for DynamoDB status
-  → Displays classification, confidence score, S3 destination, metadata
-```
+![Architecture Diagram](architecture.png)
 
-**AWS Services used:** Lambda · S3 · Textract · DynamoDB (+ Streams) · SNS · API Gateway
+The pipeline runs across three Lambda functions:
+
+1. **Lambda 1 – Classification:** triggered by an S3 PUT on the raw documents folder. Calls Textract to extract text, runs the ML model, and writes the classified document to the S3 processed folder.
+2. **Lambda 2 – Metadata Extraction:** triggered by the S3 PUT on the processed folder. Writes document metadata and classification results to DynamoDB.
+3. **Lambda 3 – Routing:** triggered by a DynamoDB Stream. Copies the document to the correct S3 output folder (Invoice / Form / Contract) and sends an email notification via SNS.
+
+**AWS Services:** Lambda · S3 · Textract · DynamoDB (+ Streams) · SNS · API Gateway
 
 ---
 
 ## Machine Learning Model
 
-### Approach
-
-We use a **TF-IDF + Logistic Regression** pipeline built with scikit-learn. This was chosen over more complex alternatives (e.g. SageMaker-hosted models) because:
-- It delivers high accuracy on keyword-heavy document text
-- It is lightweight enough to be loaded directly inside a Lambda function
-- It requires no external ML services, keeping the architecture simple and costs near-zero
-
-### Training Data
-
-Documents were sourced from open datasets covering legal contracts, invoices, and forms in PDF, PNG, and JPG format. Text was extracted using `pdfplumber` (PDFs) and `pytesseract` (images).
-
-| Label    | Documents |
-|----------|-----------|
-| Invoice  | 432       |
-| Form     | 198       |
-| Contract | included  |
-| **Total**| **630+**  |
-
-### Model Pipeline
+We use a **TF-IDF + Logistic Regression** pipeline. This was chosen over SageMaker-hosted models because it delivers strong accuracy on keyword-rich document text, is lightweight enough to load directly inside Lambda, and requires no external ML services.
 
 ```python
 Pipeline([
-    ("tfidf", TfidfVectorizer(
-        max_features=5000,
-        ngram_range=(1, 2),
-        stop_words="english"
-    )),
+    ("tfidf", TfidfVectorizer(max_features=5000, ngram_range=(1, 2), stop_words="english")),
     ("clf", LogisticRegression(max_iter=1000))
 ])
 ```
 
-The trained model is serialised with `joblib` and stored in S3, where it is loaded at Lambda cold-start.
-
----
-
-## Repository Structure
-
-```
-├── build_dataset.py        # Text extraction from PDFs/images → training_data.csv
-├── train_model.py          # Model training + evaluation + export to .pkl
-├── document_classifier.pkl # Serialised TF-IDF + Logistic Regression model
-├── training_data.csv       # Extracted text dataset with labels
-├── training_data.xlsx      # Same dataset in Excel format
-└── dashboard.html          # Frontend: upload interface + live classification feed
-```
+**Training data:** 630+ documents (invoices, forms, contracts) sourced from open datasets in PDF, PNG, and JPG format. Text extracted using `pdfplumber` (PDFs) and `pytesseract` (images). The trained model is serialised with `joblib` and stored in S3, loaded at Lambda cold-start.
 
 ---
 
 ## Dashboard
 
-The frontend (`dashboard.html`) is a single-file HTML/JS application that:
-
-- Accepts document uploads (PDF, PNG, JPG) and sends them to API Gateway as base64
-- Displays a real-time processing log
+`dashboard.html` is a single-file frontend that:
+- Accepts document uploads and sends them to API Gateway as base64
 - Polls the status API every 3 seconds until DynamoDB confirms classification
-- Shows per-document details: classification label, confidence score, S3 destination path, DynamoDB PK/SK metadata
-
-Document types are colour-coded: **Invoice** (blue) · **Contract** (purple) · **Form** (amber) · **Manual Review** (grey)
+- Displays classification label, confidence score, S3 destination, and DynamoDB metadata per document
 
 ---
 
@@ -118,23 +55,27 @@ Document types are colour-coded: **Invoice** (blue) · **Contract** (purple) · 
 
 | Metric | Value |
 |--------|-------|
-| End-to-end inference latency | ~7.6 seconds |
+| End-to-end latency | ~7.6 seconds |
 | Cost per inference | ~$0.000127 |
-| Cost at 100,000 inferences | ~$12.70 |
-| Cost at 1,000,000 inferences | ~$127.00 |
+| 100k inferences/year | ~$12.70 |
 
-Latency reflects the full async pipeline (multiple Lambda steps, DynamoDB Streams, SNS triggers, cold starts) — not model inference time alone, which is negligible.
+Latency reflects the full async pipeline including cold starts and DynamoDB Streams — not model inference time alone. For a mid-sized law firm processing ~100k documents/year, annual inference cost is effectively negligible.
 
-**Real-world estimate:** a mid-sized law firm processing ~100,000 documents per year would incur roughly **$12.70/year** in inference costs.
+**Limitations:** limited training data, no drift monitoring, edge cases may route to manual review.
 
 ---
 
-## Limitations & Future Work
+## Repository Structure
 
-- Model trained on a limited dataset; performance on edge cases is not guaranteed
-- No automated handling of data/model drift
-- Pipeline could be simplified to a single Lambda function for lower latency
-- Future additions: multilingual preprocessing (Textract supports multiple languages), audit trail routing for compliance, multi-channel input (email ingestion, WhatsApp chatbot)
+```
+├── build_dataset.py        # Text extraction from PDFs/images → training_data.csv
+├── train_model.py          # Model training, evaluation, export to .pkl
+├── document_classifier.pkl # Serialised model
+├── training_data.csv       # Labelled text dataset
+├── training_data.xlsx      # Same dataset in Excel format
+├── dashboard.html          # Frontend dashboard
+└── architecture.png        # AWS architecture diagram
+```
 
 ---
 
@@ -145,14 +86,10 @@ Latency reflects the full async pipeline (multiple Lambda steps, DynamoDB Stream
 pip install pdfplumber pytesseract pillow pandas
 python build_dataset.py
 ```
-Reads documents from local folders (`Contracts/`, `Forms/`, `Invoice/`) and outputs `training_data.csv`.
 
 **2. Train the model**
 ```bash
 pip install scikit-learn pandas joblib openpyxl
 python train_model.py
 ```
-Outputs `document_classifier.pkl`.
-
-**3. Deploy**  
-Upload `document_classifier.pkl` to your S3 bucket and reference its path in the classification Lambda function.
+Outputs `document_classifier.pkl`. Upload this to S3 and reference its path in the classification Lambda.
