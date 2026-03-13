@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report
 import joblib
 import pandas as pd
 
-df = pd.read_excel("/Users/mariamorazamora/Desktop/training_data.xlsx")
+df = pd.read_excel("training_data.xlsx")
 
 df = df[df["text"].str.len() > 50]
 
