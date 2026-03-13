@@ -4,7 +4,7 @@ import pytesseract
 from PIL import Image
 import pandas as pd
 
-BASE_DIR = "/Users/mariamorazamora/Downloads/CC"
+BASE_DIR = "."
 
 CLASS_FOLDERS = {
     "contract": "Contracts",
