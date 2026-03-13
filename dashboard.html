@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Classification & Routing Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f5f7fa;
+      color: #2d3748;
+      line-height: 1.6;
+    }
+
+    /* Top Navigation Bar */
+    .navbar {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-placeholder {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .app-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    .navbar-info {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .env-badge {
+      background-color: #edf2f7;
+      color: #4a5568;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    /* Main Content Area */
+    .main-content {
+      padding: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    /* Card Styles */
+    .card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #edf2f7;
+    }
+
+    /* Upload Panel */
+    .upload-section {
+      margin-bottom: 1rem;
+    }
+
+    .file-input-wrapper {
+      margin-bottom: 1rem;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px dashed #cbd5e0;
+      border-radius: 8px;
+      background-color: #f7fafc;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    input[type="file"]:hover {
+      border-color: #667eea;
+      background-color: #edf2f7;
+    }
+
+    .upload-btn {
+      width: 100%;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.75rem;
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .upload-btn:active {
+      transform: translateY(0);
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .helper-text {
+      font-size: 0.875rem;
+      color: #718096;
+      line-height: 1.5;
+    }
+
+    /* Search Box */
+    .search-box {
+      margin-bottom: 1rem;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.625rem 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background-color: #f7fafc;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.75rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #4a5568;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    td {
+      padding: 0.875rem 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.875rem;
+    }
+
+    tbody tr {
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    tbody tr:hover {
+      background-color: #f7fafc;
+    }
+
+    tbody tr.selected {
+      background-color: #edf2f7;
+    }
+
+    /* Status Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .badge-processed {
+      background-color: #c6f6d5;
+      color: #22543d;
+    }
+
+    .badge-processing {
+      background-color: #feebc8;
+      color: #7c2d12;
+    }
+
+    .badge-failed {
+      background-color: #fed7d7;
+      color: #742a2a;
+    }
+
+    .badge-invoice {
+      background-color: #bee3f8;
+      color: #2c5282;
+    }
+
+    .badge-contract {
+      background-color: #e9d8fd;
+      color: #44337a;
+    }
+
+    .badge-form {
+      background-color: #fbd38d;
+      color: #744210;
+    }
+
+    .badge-manual_review,
+    .badge-other {
+      background-color: #e2e8f0;
+      color: #2d3748;
+    }
+
+    /* Details Panel */
+    .detail-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #4a5568;
+      margin-bottom: 0.375rem;
+    }
+
+    .detail-value {
+      font-size: 0.9375rem;
+      color: #2d3748;
+      padding: 0.5rem;
+      background-color: #f7fafc;
+      border-radius: 6px;
+    }
+
+    .detail-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .detail-list li {
+      padding: 0.375rem 0.5rem;
+      background-color: #f7fafc;
+      margin-bottom: 0.375rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #a0aec0;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    /* System Status Grid */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-card {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .status-card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-card-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .status-operational {
+      color: #38a169;
+    }
+
+    /* Log Panel */
+    .log-panel {
+      background-color: #1a202c;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+
+    .log-entry {
+      margin-bottom: 0.375rem;
+      white-space: nowrap;
+    }
+
+    .log-timestamp {
+      color: #a0aec0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .navbar {
+        padding: 1rem;
+      }
+
+      .main-content {
+        padding: 1rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .navbar-info {
+        gap: 0.75rem;
+      }
+
+      .env-badge {
+        display: none;
+      }
+
+      .app-title {
+        font-size: 1rem;
+      }
+
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="logo-placeholder">DC</div>
+    <h1 class="app-title">Document Classification & Routing Dashboard</h1>
+  </div>
+  <div class="navbar-info">
+    <span class="env-badge">Environment: DEV</span>
+    <div class="user-avatar">DM</div>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="dashboard-grid">
+    <div class="left-column">
+      <!-- Upload Panel -->
+      <section class="card">
+        <h2 class="card-title">Upload Document</h2>
+        <div class="upload-section">
+          <div class="file-input-wrapper">
+            <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.PDF,.PNG,.JPG,.JPEG">
+          </div>
+          <button class="upload-btn" id="uploadBtn">Upload & Process</button>
+          <p class="helper-text">
+            Upload a file to process via Textract, classify it, and route to S3.
+            Supported formats: PDF, PNG, JPG
+          </p>
+        </div>
+      </section>
+
+      <!-- Recent Documents Table -->
+      <section class="card">
+        <h2 class="card-title">Recent Documents</h2>
+        <div class="search-box">
+          <input type="text" class="search-input" id="searchInput"
+                 placeholder="Search by filename or classification...">
+        </div>
+        <div class="table-wrapper">
+          <table id="documentsTable">
+            <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Classification</th>
+              <th>Status</th>
+              <th>S3 Destination</th>
+              <th>Timestamp</th>
+            </tr>
+            </thead>
+            <tbody id="documentsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="right-column">
+      <!-- Details -->
+      <section class="card" id="detailsPanel">
+        <h2 class="card-title">Document Details</h2>
+        <div id="detailsContent" class="empty-state">
+          <div class="empty-state-icon">📄</div>
+          <p>Select a document from the table to view details</p>
+        </div>
+      </section>
+
+      <!-- Status -->
+      <section class="card">
+        <h2 class="card-title">System Status & AWS Components</h2>
+        <div class="status-grid">
+          <div class="status-card">
+            <div class="status-card-title">Textract</div>
+            <div class="status-card-value status-operational">Operational</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">DynamoDB</div>
+            <div class="status-card-value status-operational">OK</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">S3 Routing</div>
+            <div class="status-card-value status-operational">Active</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">SES Notifications</div>
+            <div class="status-card-value" id="sesStatus">Ready</div>
+          </div>
+        </div>
+
+        <div class="detail-group">
+          <div class="detail-label">S3 Buckets</div>
+          <ul class="detail-list">
+            <li>s3://document-ingestion-nucket-cc/incoming</li>
+            <li>s3://document-ingestion-nucket-cc/processed/&lt;type&gt;</li>
+            <li>s3://document-ingestion-nucket-cc/invoices</li>
+            <li>s3://document-ingestion-nucket-cc/contracts</li>
+            <li>s3://document-ingestion-nucket-cc/forms</li>
+          </ul>
+        </div>
+
+        <div class="detail-group">
+          <div class="detail-label">CloudWatch Monitoring</div>
+          <div class="detail-value">
+            <div>0 critical alerts</div>
+            <div id="lastError">Last error: None</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logs -->
+      <section class="card">
+        <h2 class="card-title">Processing Logs</h2>
+        <div class="log-panel" id="logPanel">
+          <div class="log-entry">
+            <span class="log-timestamp">[System initialized]</span> Ready to process documents
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ========= CONFIG =========
+  const API_BASE_URL = "https://yfnrk2t2d6.execute-api.eu-central-1.amazonaws.com";
+  const API_UPLOAD_URL = `${API_BASE_URL}/upload`;
+  const API_STATUS_URL = `${API_BASE_URL}/status`;
+
+  let documents = [];
+  let selectedDocumentId = null;
+
+  const BUCKET_BASE = "s3://document-ingestion-nucket-cc";
+  const DEST_BY_TYPE = {
+    invoice: `${BUCKET_BASE}/invoices`,
+    contract: `${BUCKET_BASE}/contracts`,
+    form: `${BUCKET_BASE}/forms`,
+    manual_review: `${BUCKET_BASE}/manual_review`,
+    other: `${BUCKET_BASE}/others`
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initializeEventListeners();
+  });
+
+  function initializeEventListeners() {
+    document.getElementById("uploadBtn").addEventListener("click", handleUpload);
+    document.getElementById("searchInput").addEventListener("input", handleSearch);
+  }
+
+  // ============ UPLOAD + POLLING REAL AWS ============
+
+  async function handleUpload() {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert("Please select a file to upload");
+      return;
+    }
+
+    const uploadBtn = document.getElementById("uploadBtn");
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "Uploading...";
+
+    const tempId = generateId();
+    const now = new Date().toISOString();
+    const sourceKey = `incoming/${file.name}`;
+
+    const tempDoc = {
+      id: tempId,
+      filename: file.name,
+      classification: "Processing",
+      classificationKey: "processing",
+      status: "Processing",
+      bucket: `${BUCKET_BASE}/incoming`,
+      timestamp: now,
+      confidence: 0,
+      textractFields: [],
+      dynamoMetadata: {
+        PK: "-",
+        SK: `META#${now}`,
+        status: "PROCESSING",
+        createdAt: now
+      }
+    };
+
+    documents.unshift(tempDoc);
+    renderDocumentsTable();
+    selectDocument(tempId);
+    addLogEntry(`Uploading "${file.name}" to AWS (S3 incoming/) ...`);
+
+    try {
+      const base64Data = await readFileAsBase64(file);
+      const parts = base64Data.split(",");
+      const pureBase64 = parts.length > 1 ? parts[1] : parts[0];
+
+      const resp = await fetch(API_UPLOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          data: pureBase64
+        })
+      });
+
+      let data = {};
+      try {
+        data = await resp.json();
+      } catch (e) {
+        console.warn("No JSON body from upload lambda (ok)", e);
+      }
+
+      if (!resp.ok) {
+        console.error("Upload error:", data);
+        addLogEntry(`❌ Upload error for "${file.name}": ${data.error || resp.status}`);
+        alert("Error uploading file: " + (data.error || resp.status));
+        return;
+      }
+
+      addLogEntry(`✅ Uploaded "${file.name}" to ${data.bucket || 'document-ingestion-nucket-cc'}/${data.key || sourceKey}`);
+
+      // Empezar a consultar el estado real en DynamoDB
+      pollDocumentStatus(sourceKey, tempId);
+
+    } catch (err) {
+      console.error("Unexpected error uploading file:", err);
+      addLogEntry(`❌ Unexpected upload error: ${err}`);
+      alert("Unexpected error uploading file: " + err);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = "Upload & Process";
+      fileInput.value = "";
+    }
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function pollDocumentStatus(sourceKey, localId, attempt = 0) {
+    const MAX_ATTEMPTS = 20;
+    const INTERVAL_MS = 3000;
+
+    const url = `${API_STATUS_URL}?source_key=${encodeURIComponent(sourceKey)}`;
+    console.log("Calling status API:", url);
+
+    fetch(url)
+      .then(async resp => {
+        if (resp.status === 404) {
+          if (attempt < MAX_ATTEMPTS) {
+            setTimeout(() => pollDocumentStatus(sourceKey, localId, attempt + 1), INTERVAL_MS);
+          } else {
+            addLogEntry(`⏱️ Timeout waiting for classification of ${sourceKey}`);
+          }
+          return null;
+        }
+
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          console.error("Status API error:", resp.status, errBody);
+          addLogEntry(`❌ Status API error: ${resp.status} - ${errBody}`);
+          return null;
+        }
+
+        return resp.json();
+      })
+      .then(data => {
+        if (!data) return;
+        addLogEntry(`✅ Received classification from DynamoDB for ${sourceKey} (type=${data.document_type})`);
+        updateDocumentFromAws(localId, data);
+      })
+      .catch(err => {
+        console.error("Error calling status API:", err);
+        addLogEntry(`❌ Error calling status API: ${err}`);
+      });
+  }
+
+  function updateDocumentFromAws(localId, item) {
+    const idx = documents.findIndex(d => d.id === localId);
+    if (idx === -1) return;
+
+    const docType = item.document_type || "other";
+    const ui = mapDocType(docType);
+
+    const createdAt = item.upload_timestamp || new Date().toISOString();
+    const confidence = item.confidence_score ? parseFloat(item.confidence_score) : 0;
+
+    const processedKey = item.processed_key || item.source_key || "";
+    const destPath = processedKey
+      ? `s3://${item.source_bucket}/${processedKey}`
+      : DEST_BY_TYPE[docType] || DEST_BY_TYPE.other;
+
+    const updated = {
+      id: localId,
+      filename: item.source_key ? item.source_key.split("/").slice(-1)[0] : documents[idx].filename,
+      classification: ui.label,
+      classificationKey: ui.cssKey,
+      status: (item.status || "classified").toUpperCase(),
+      bucket: destPath,
+      timestamp: createdAt,
+      confidence: confidence,
+      textractFields: [],
+      dynamoMetadata: {
+        PK: item.document_id ? `DOC#${item.document_id}` : documents[idx].dynamoMetadata.PK,
+        SK: `META#${createdAt}`,
+        status: item.status || "classified",
+        createdAt: createdAt
+      }
+    };
+
+    documents[idx] = updated;
+    renderDocumentsTable();
+    selectDocument(updated.id);
+  }
+
+  function mapDocType(docType) {
+    switch (docType) {
+      case "invoice":
+        return { label: "Invoice", cssKey: "invoice" };
+      case "contract":
+        return { label: "Contract", cssKey: "contract" };
+      case "form":
+        return { label: "Form", cssKey: "form" };
+      case "manual_review":
+        return { label: "Manual review", cssKey: "manual_review" };
+      default:
+        return { label: "Other", cssKey: "other" };
+    }
+  }
+
+  // ============ TABLA & DETALLES ============
+
+  function renderDocumentsTable(filteredDocs = null) {
+    const tbody = document.getElementById("documentsTableBody");
+    const docsToRender = filteredDocs || documents;
+
+    tbody.innerHTML = "";
+
+    if (docsToRender.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #a0aec0;">No documents found</td></tr>';
+      return;
+    }
+
+    docsToRender.forEach(doc => {
+      const row = createDocumentRow(doc);
+      tbody.appendChild(row);
+    });
+  }
+
+  function createDocumentRow(doc) {
+    const row = document.createElement("tr");
+    row.dataset.id = doc.id;
+    if (selectedDocumentId === doc.id) row.classList.add("selected");
+
+    const badgeType = (doc.classificationKey || doc.classification || "other").toString().toLowerCase();
+
+    row.innerHTML = `
+      <td>${doc.filename}</td>
+      <td><span class="badge badge-${badgeType}">${doc.classification}</span></td>
+      <td><span class="badge badge-${doc.status.toLowerCase()}">${doc.status}</span></td>
+      <td>${doc.bucket}</td>
+      <td>${formatTimestamp(doc.timestamp)}</td>
+    `;
+
+    row.addEventListener("click", () => selectDocument(doc.id));
+    return row;
+  }
+
+  function selectDocument(docId) {
+    selectedDocumentId = docId;
+    const doc = documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    document.querySelectorAll("#documentsTableBody tr").forEach(row => {
+      row.classList.toggle("selected", row.dataset.id === docId);
+    });
+
+    updateDetailsPanel(doc);
+    document.getElementById("detailsPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function updateDetailsPanel(doc) {
+    const detailsContent = document.getElementById("detailsContent");
+    const confidencePercent = (parseFloat(doc.confidence) * 100).toFixed(1);
+
+    detailsContent.innerHTML = `
+      <div class="detail-group">
+        <div class="detail-label">Filename</div>
+        <div class="detail-value">${doc.filename}</div>
+      </div>
+
+      <div class="detail-group">
+        <div class="detail-label">Classification Result</div>
+        <div class="detail-value">
+          <span class="badge badge-${(doc.classificationKey || "other").toLowerCase()}">${doc.classification}</span>
+        </div>
+      </div>
+
+      <div class="detail-group">
+        <div class="detail-label">Confidence Score</div>
+        <div class="detail-value">${confidencePercent}%</div>
+      </div>
+
+      <div class="detail-group">
+        <div class="detail-label">DynamoDB Metadata</div>
+        <ul class="detail-list">
+          <li><strong>PK:</strong> ${doc.dynamoMetadata.PK}</li>
+          <li><strong>SK:</strong> ${doc.dynamoMetadata.SK}</li>
+          <li><strong>Status:</strong> ${doc.dynamoMetadata.status}</li>
+          <li><strong>Created At:</strong> ${formatTimestamp(doc.dynamoMetadata.createdAt)}</li>
+        </ul>
+      </div>
+
+      <div class="detail-group">
+        <div class="detail-label">S3 Destination</div>
+        <div class="detail-value">${doc.bucket}</div>
+      </div>
+    `;
+  }
+
+  function handleSearch(event) {
+    const searchTerm = event.target.value.toLowerCase().trim();
+    if (!searchTerm) {
+      renderDocumentsTable();
+      return;
+    }
+
+    const filtered = documents.filter(doc =>
+      doc.filename.toLowerCase().includes(searchTerm) ||
+      doc.classification.toLowerCase().includes(searchTerm)
+    );
+    renderDocumentsTable(filtered);
+  }
+
+  function addLogEntry(message) {
+    const logPanel = document.getElementById("logPanel");
+    const timestamp = new Date().toISOString();
+    const logEntry = document.createElement("div");
+    logEntry.className = "log-entry";
+    logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+    logPanel.appendChild(logEntry);
+    logPanel.scrollTop = logPanel.scrollHeight;
+  }
+
+  function formatTimestamp(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleString();
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  }
+</script>
+</body>
+</html>
